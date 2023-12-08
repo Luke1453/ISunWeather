@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ISunWeather": {
+      "commandName": "Project",
+      "commandLineArgs": "--Cities Vilnius, Addasd, Kaunas, , Palanga"
+    }
+  }
+}
