@@ -23,3 +23,5 @@ Allowing to replace API and data storage as long interface doesn't change.
 Wrote integration tests:
 
 ![image](https://github.com/Luke1453/ISunWeather/assets/43075307/6a99e104-abcc-4e61-85f0-99b47822828b)
+
+[Google Drive link](https://drive.google.com/file/d/1u9usBwh0sW2gaA84_l-c4MczO3CHmWqf/view?usp=sharing)
