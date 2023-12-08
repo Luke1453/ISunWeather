@@ -54,7 +54,7 @@ public class WeatherApiService : IWeatherApiService
                 $"Returned {httpResponseMessage.StatusCode}");
         }
 
-        var response = JsonSerializer.Deserialize<string[]>(responseAsJsonString);
+        var response = JsonSerializer.Deserialize(responseAsJsonString, CitiesJsonContext.Default.StringArray);
         return response
             ?? throw new Exception($"POST {_apiConfig.BaseUrl + _apiConfig.CitiesRoute}: " +
                 $"Response does't contain string array");
@@ -75,7 +75,7 @@ public class WeatherApiService : IWeatherApiService
                 $"Returned {httpResponseMessage.StatusCode}");
         }
 
-        var response = JsonSerializer.Deserialize<WeatherReport>(responseAsJsonString);
+        var response = JsonSerializer.Deserialize(responseAsJsonString, WeatherReportJsonContext.Default.WeatherReport);
         return response
             ?? throw new Exception($"POST {_apiConfig.BaseUrl + route}: " +
                 $"Response does't contain weather report data");

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using System.Text;
+using System.Reflection;
 
 namespace ISunWeather;
 
@@ -65,8 +65,11 @@ internal class Program
             })
             .ConfigureAppConfiguration(app =>
             {
-                byte[] buffer = Encoding.UTF8.GetBytes(Appsettings.config);
-                using MemoryStream? resourceFileStream = new(buffer);
+                // Currently configuration is done by embeding appsettings.json (to have only executable file)
+                // in the future if application will become web or desktop app i would not embed appsettings.json
+                // but store it together with executable
+                Assembly assembly = Assembly.GetExecutingAssembly();
+                using Stream? resourceFileStream = assembly.GetManifestResourceStream("ISunWeather.appsettings.json");
                 if (resourceFileStream is not null)
                 {
                     resourceFileStream.Seek(0, SeekOrigin.Begin);

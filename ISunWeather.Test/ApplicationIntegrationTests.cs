@@ -7,7 +7,8 @@ namespace ISunWeather.Test;
 // Mainly used to check console output
 public class ApplicationIntegrationTests
 {
-    private const string binDirectory = @"C:\Users\Luke\Desktop\git\ISunWeather\ISunWeather\bin\Debug\net8.0\";
+    private const string binDirectory = @"C:\Users\Luke\Desktop\git\ISunWeather\ISunWeather\bin\Release\net8.0\win-x64\publish\";
+    private static int processID = -1;
 
     protected static Process StartApplication(string args)
     {
@@ -25,7 +26,9 @@ public class ApplicationIntegrationTests
             WindowStyle = ProcessWindowStyle.Hidden,
         };
 
-        return Process.Start(processStartInfo) ?? throw new Exception("Failed to start ISun.exe process");
+        var process = Process.Start(processStartInfo) ?? throw new Exception("Failed to start ISun.exe process");
+        processID = process.Id;
+        return process;
     }
 
     protected static Task<List<string>> WaitForResponse(Process process)
@@ -35,6 +38,38 @@ public class ApplicationIntegrationTests
             var output = process.StandardOutput.ReadToEnd();
             return output.Split(Environment.NewLine)[..^1].ToList();
         });
+    }
+
+
+    [TearDown]
+    public void Kill_ISunEXE_Process()
+    {
+        try
+        {
+            Process process = Process.GetProcessById(processID);
+            if (!process.HasExited)
+            {
+                try
+                {
+                    // Kill the process
+                    Console.WriteLine($"Killing process with ID {process.Id} and name {process.ProcessName}");
+                    process.Kill();
+                    process.WaitForExit();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error killing process: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Process with ID {processID} has already exited.");
+            }
+        }
+        catch (ArgumentException)
+        {
+            Console.WriteLine($"Process with ID {processID} does not exist.");
+        }
     }
 
     [Test]
@@ -83,43 +118,142 @@ public class ApplicationIntegrationTests
     }
 
     [Test, CancelAfter(10000)]
-    public void RunApplication_ValidArguments_PrintsReport()
+    public void RunApplication_ValidArguments_PrintsReport(CancellationToken token)
     {
         // Arrange
         var process = StartApplication("--Cities Vilnius");
 
         // Act
         using var stdout = process.StandardOutput;
-        while (true)
+        while (!token.IsCancellationRequested)
         {
             var line = stdout.ReadLine();
             if (line?.Contains("--- Weather in Vilnius:") == true)
             {
-                process.Kill();
                 Assert.Pass();
             }
         }
     }
 
     [Test, CancelAfter(10000)]
-    public void RunApplication_ValidArguments_CreatesFiles()
+    public void RunApplication_ValidArguments_CreatesFiles(CancellationToken token)
     {
         // Arrange
-        var process = StartApplication("--Cities Vilnius");
+        StartApplication("--Cities Vilnius");
+
+        // Act
+        while (!token.IsCancellationRequested)
+        {
+            if (File.Exists($"{binDirectory}log.txt") && File.Exists($"{binDirectory}weatherReports.txt"))
+            {
+                Assert.Pass();
+            }
+        }
+    }
+
+    [Test, CancelAfter(10000)]
+    public void RunApplication_ValidAndInvalidArguments_SortsArguments(CancellationToken token)
+    {
+        // Arrange
+        var process = StartApplication("--Cities Vilnius Kaunas africa asia");
+        bool nextValid = false;
+        bool nextInvalid = false;
+
+        bool validPassed = false;
+        bool invalidPassed = false;
 
         // Act
         using var stdout = process.StandardOutput;
-        while (true)
+        while (!token.IsCancellationRequested)
         {
             var line = stdout.ReadLine();
-            if (line?.Contains("--- Weather in Vilnius:") == true)
+            if (line?.Contains("We have found some invalid cities:") == true)
             {
-                if (File.Exists($"{binDirectory}log.txt") && File.Exists($"{binDirectory}weatherReports.txt"))
+                nextInvalid = true;
+            }
+            else if (line?.Contains("Reporting weather using cities:") == true)
+            {
+                nextValid = true;
+            }
+            else if (nextInvalid)
+            {
+                if (line?.Contains("africa, asia") == true)
                 {
-                    process.Kill();
-                    Assert.Pass();
+                    invalidPassed = true;
                 }
+                nextInvalid = false;
+            }
+            else if (nextValid)
+            {
+                if (line?.Contains("Vilnius, Kaunas") == true)
+                {
+                    validPassed = true;
+                }
+                nextValid = false;
+            }
+
+            if (validPassed && invalidPassed)
+            {
+                Assert.Pass();
             }
         }
+    }
+
+    [Test, CancelAfter(30000)]
+    public async Task RunApplication_ValidAndInvalidArguments_TextFileContainsOnlyValid(CancellationToken token)
+    {
+        // Arrange
+        StartApplication("--Cities Vilnius africa");
+
+        // Act
+        // wait until file exists 
+        while (!token.IsCancellationRequested)
+        {
+            if (File.Exists($"{binDirectory}weatherReports.txt"))
+            {
+                break;
+            }
+        }
+
+        // check file contents
+        while (!token.IsCancellationRequested)
+        {
+            using StreamReader reader = new(
+                new FileStream($"{binDirectory}weatherReports.txt", FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+
+
+                );
+            string file = reader.ReadToEnd();
+            var vilniusReportCount = CountOccurrences(file, "--- Weather in Vilnius:", StringComparison.Ordinal);
+            bool invalidReportExists = file.Contains("africa");
+
+            if (vilniusReportCount >= 2 && !invalidReportExists)
+            {
+                // waiting for 2 Vilnius reports
+                // to make sure that invalid report doesn't appear
+                Assert.Pass();
+            }
+            if (invalidReportExists)
+            {
+                Assert.Fail();
+            }
+            // wait 5 sec and read again
+            await Task.Delay(5000, token);
+        }
+    }
+
+    // Utility Methods
+    private static int CountOccurrences(string text, string pattern, StringComparison comparisonType)
+    {
+        int count = 0;
+        int index = 0;
+
+        while ((index = text.IndexOf(pattern, index, comparisonType)) != -1)
+        {
+            index += pattern.Length;
+            count++;
+        }
+
+        return count;
     }
 }

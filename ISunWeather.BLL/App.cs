@@ -49,10 +49,12 @@ public class App(
         {
             Console.WriteLine();
             Console.WriteLine("We have found some invalid cities:");
+            var sb1 = new StringBuilder();
             foreach (var c in invalidCities)
             {
-                Console.WriteLine(c);
+                sb1.Append($"{c}, ");
             }
+            Console.WriteLine(sb1.ToString()[..^2]);
             Console.WriteLine("Proceding weather reporting using valid cities, if any.");
         }
 
@@ -65,10 +67,12 @@ public class App(
 
         Console.WriteLine();
         Console.WriteLine("Reporting weather using cities:");
+        var sb2 = new StringBuilder();
         foreach (var c in requiredCities)
         {
-            Console.WriteLine(c);
+            sb2.Append($"{c}, ");
         }
+        Console.WriteLine(sb2.ToString()[..^2]);
         Console.WriteLine();
 
         // Main report loop
@@ -96,7 +100,7 @@ public class App(
 
     #region Utility methods
 
-    private static string[] TruncateCities(string[] cities)
+    public static string[] TruncateCities(string[] cities)
     {
         for (int i = 0; i < cities.Length; i++)
         {
@@ -105,7 +109,7 @@ public class App(
         return cities;
     }
 
-    private static string BuildWeatherReport(WeatherReport wr)
+    public static string BuildWeatherReport(WeatherReport wr)
     {
         StringBuilder sb = new();
         sb.AppendLine();

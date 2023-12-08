@@ -21,6 +21,7 @@ namespace ISunWeather.BLL.Services
 
             _logger.LogInformation("Weather report file: {filepath}", _reportFile);
             _writer = File.AppendText(_reportFile);
+            //_writer = new StreamWriter(new FileStream(_reportFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
         }
 
         public async Task SaveWeatherReport(string wr)
